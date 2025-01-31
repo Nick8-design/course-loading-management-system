@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "6212006149",
+    "project_id": "course-loading",
+    "storage_bucket": "course-loading.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:6212006149:android:db42e171e3dc8ede0d476c",
+        "android_client_info": {
+          "package_name": "com.nickdieda.course_loading_system"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA3Jf73ftvf9ebYYCb6gWFX9cXqX4ZRTsw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
