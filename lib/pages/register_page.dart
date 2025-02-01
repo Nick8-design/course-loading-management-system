@@ -53,18 +53,26 @@ bool phn=false;
         .size
         .width / 2;
     return Scaffold(
-      appBar: AppBar(
-leading: IconButton(
-    onPressed: (){
-     Navigator.push(context,
-         MaterialPageRoute(builder:(context)=> LoginPage()
-         )
 
-     );
-    },
-    icon: Icon(Icons.arrow_back_sharp)
-),
-      ),
+//
+//       appBar: AppBar(
+// leading:
+// IconButton(
+//     onPressed: (){
+//      Navigator.push(context,
+//          MaterialPageRoute(builder:(context)=> LoginPage()
+//          )
+//
+//      );
+//     },
+//     icon: Icon(Icons.arrow_back_sharp)
+// ),
+//
+//
+//       ),
+//
+
+
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           if (constraints.maxWidth > 700) {
@@ -102,6 +110,25 @@ leading: IconButton(
 
                     )
                 ),
+
+                Positioned(
+                  left: 16,
+                  top: 16,
+
+                  child: IconButton(
+                      onPressed: (){
+                        Navigator.push(context,
+                            MaterialPageRoute(builder:(context)=> LoginPage()
+                            )
+
+                        );
+                      },
+                      icon: Icon(Icons.arrow_back_sharp)
+                  ),
+
+
+                ),
+
                 Positioned(
                   top: phn? 64:45,
                   right: phn?8:16,
@@ -141,12 +168,32 @@ leading: IconButton(
 
                       ),
                       Positioned(
-                        top: 32,
-                        right: 16,
-                        child: adminbtn(),
+                          top: 32,
+                          right: 16,
+                          child:Container(
+                            margin: EdgeInsets.only(top: 25),
+                            child:    adminbtn(),
+                          )
+
+
                       ),
+      Positioned(
+          left: 16,
+          top: 16,
+
+          child: IconButton(
+          onPressed: (){
+          Navigator.push(context,
+          MaterialPageRoute(builder:(context)=> LoginPage()
+          )
+
+          );
+          },
+          icon: Icon(Icons.arrow_back_sharp)
+          ),
 
 
+          )
                     ]
                 )
             );
@@ -302,8 +349,24 @@ leading: IconButton(
         Positioned(
             right: 0,
             child: RegForm()
-        )
+        ),
+        Positioned(
+          left: 16,
+          top: 16,
 
+          child: IconButton(
+              onPressed: (){
+                Navigator.push(context,
+                    MaterialPageRoute(builder:(context)=> LoginPage()
+                    )
+
+                );
+              },
+              icon: Icon(Icons.arrow_back_sharp)
+          ),
+
+
+        )
 
       ],
     );

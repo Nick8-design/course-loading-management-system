@@ -1,9 +1,15 @@
 import 'dart:ui';
 
+import 'package:course_loading_system/pages/conflict_detection.dart';
+import 'package:course_loading_system/pages/course_scheduling.dart';
+import 'package:course_loading_system/pages/dashboard.dart';
+import 'package:course_loading_system/pages/instructor_mgt.dart';
 import 'package:course_loading_system/pages/login_page.dart';
 import 'package:course_loading_system/pages/register_page.dart';
+import 'package:course_loading_system/pages/reports.dart';
 import 'package:course_loading_system/security/auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,17 +18,23 @@ import 'constants.dart';
 
 import 'data/providers.dart';
 import 'firebase_options.dart';
-import 'home.dart';
+
 
 Future<void> main() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-
   WidgetsFlutterBinding.ensureInitialized();
-
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  FirebaseMessaging messaging = FirebaseMessaging.instance;
 
+  // Request permission for notifications
+  NotificationSettings settings = await messaging.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+  print("Notification permission: ${settings.authorizationStatus}");
   runApp(
     ProviderScope(child:   LoadingApp())
 
@@ -54,7 +66,7 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
 
   /// Authentication to manage user login session
 
-  final YummyAuth _auth = YummyAuth();
+
 
 
 
@@ -63,63 +75,62 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
     redirect: _appRedirect,
     routes: [
       GoRoute(
-          path: '/login',
-          builder: (context, state) {
-          return  LoginPage(
-              // onLogIn: (Credentials credentials) async {
-              //   _auth
-              //       .signIn(credentials.username, credentials.password)
-              //       .then((_) => context.go('/${YummyTab.home.value}'));
-              // }
-            );
-
-          },
-
-
-
-
+        path: '/login',
+        builder: (context, state) => LoginPage(),
       ),
       GoRoute(
-          path: '/register',
-          builder: (context, state) =>
-              RegisterPage()
-
+        path: '/register',
+        builder: (context, state) => RegisterPage(),
       ),
-
       GoRoute(
-          path: '/:tab',
-          builder: (context, state) {
-            return Home(
-                auth: _auth,
-                changeTheme: changeThemeMode,
-                changeColor: changeColor,
-                colorSelected: colorSelected,
-                tab: int.tryParse(
-                    state.pathParameters['tab'] ?? '') ?? 0);
-          },
-
-
+        path: '/dashboard',
+        builder: (context, state) {
+          return DashboardScreen(
+            changeTheme: changeThemeMode,
+            changeColor: changeColor,
+            colorSelected: colorSelected,
+          );
+        },
       ),
-
-
-
-
-
-
+      GoRoute(
+        path: '/instructor',
+        builder: (context, state) {
+          return InstructorMgt(
+            changeTheme: changeThemeMode,
+            changeColor: changeColor,
+            colorSelected: colorSelected,
+          );
+        },
+      ),
+      GoRoute(
+        path: '/scheduling',
+        builder: (context, state) => CourseSchedulingScreen(),
+      ),
+      GoRoute(
+        path: '/conflicts',
+        builder: (context, state) => ConflictDetectionScreen(),
+      ),
+      GoRoute(
+        path: '/reports',
+        builder: (context, state) => ReportsScreen(),
+      ),
     ],
     errorPageBuilder: (context, state) {
       return MaterialPage(
         key: state.pageKey,
         child: Scaffold(
           body: Center(
-            child: Text(
-              state.error.toString(),
-            ),
+            child: Text(state.error.toString()),
           ),
         ),
       );
     },
   );
+
+
+
+
+
 
   Future<String?> _appRedirect(
 
@@ -136,10 +147,10 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
     if (!loggedIn) {
       return '/login';
     }
-    // Go to root of app / if the user is already signed in
+
     else if (loggedIn && isOnLoginPage) {
-      return '/0}';
-     // return '/login';
+      return '/dashboard';
+
     }
 
     // no redirect

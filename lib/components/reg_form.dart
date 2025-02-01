@@ -197,6 +197,17 @@ class _StateRegForm extends   ConsumerState<RegForm> {
 
   }
 
+  void checkUserRole() async {
+    final userDao = ref.watch(userDaoProvider);
+    String? role = await userDao.getUserRole();
+    if (role == 'admin') {
+      Navigator.pushNamed(context, '/dashboard');
+    } else if (role == 'instructor') {
+      Navigator.pushNamed(context, '/instructor');
+    }
+  }
+
+
   Widget logreg(){
     final userDao = ref.watch(userDaoProvider);
 
@@ -218,14 +229,41 @@ class _StateRegForm extends   ConsumerState<RegForm> {
               if (_formKey.currentState!.validate()) {
                 final errorMessage = await userDao.signup(
                   _emailController.text,
-                 _passwordConfirm.text ==_passwordController.text?
-                 _passwordController.text
-                     :'',
-                    ref.watch(selectedNameProvider),
+                  _passwordConfirm.text == _passwordController.text ?
+                  _passwordController.text
+                      : '',
+                  ref.watch(selectedNameProvider),
 
                 );
 
-                context.go("/0");
+
+                if (_formKey.currentState!.validate()) {
+                  final errorMessage = await userDao.login(
+                    _emailController.text,
+                    _passwordController.text,
+                  );
+
+
+                  if (errorMessage == null) {
+                    await Future.delayed(Duration(milliseconds: 2)); // Small delay to ensure auth state update
+
+                    context.go('/dashboard');
+
+                  } else {
+                    if (!mounted) return;
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(errorMessage),
+                        duration: const Duration(milliseconds: 700),
+                      ),
+                    );
+                  }
+
+
+
+                }
+
 
 
 
@@ -239,7 +277,6 @@ class _StateRegForm extends   ConsumerState<RegForm> {
                   );
                 }
               }
-
 
             },
 

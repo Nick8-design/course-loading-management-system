@@ -1,105 +1,44 @@
 import 'dart:developer';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-// 1
 class UserDao extends ChangeNotifier {
   String errorMsg = 'An error has occurred.';
-
-  // 2
   final auth = FirebaseAuth.instance;
+  final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-  // 1
   bool isLoggedIn() {
     return auth.currentUser != null;
   }
 
-  // 2
   String? userId() {
     return auth.currentUser?.uid;
   }
 
-  //3
   String? email() {
     return auth.currentUser?.email;
   }
 
-  // 1
-  Future<String?> signup(String email, String password,String role) async {
+  /// **Signup method with role saving**
+  Future<String?> signup(String email, String password, String role) async {
     try {
-      // 2
-
-/*
-  import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
-
-Future<void> registerUser(String email, String password, String role) async {
-  try {
-    // Create user in Firebase Authentication
-    UserCredential userCredential = await FirebaseAuth.instance
-        .createUserWithEmailAndPassword(email: email, password: password);
-
-    // Save user role in Firestore
-    await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userCredential.user!.uid)
-        .set({
-      'email': email,
-      'role': role,
-    });
-
-    print('User registered with role: $role');
-  } catch (e) {
-    print('Error: $e');
-  }
-}
-
-Future<void> loginUser(String email, String password) async {
-  try {
-    // Sign in user
-    UserCredential userCredential = await FirebaseAuth.instance
-        .signInWithEmailAndPassword(email: email, password: password);
-
-    // Retrieve role from Firestore
-    DocumentSnapshot userDoc = await FirebaseFirestore.instance
-        .collection('users')
-        .doc(userCredential.user!.uid)
-        .get();
-
-    String role = userDoc['role'];
-    print('User logged in as $role');
-
-    // Redirect based on role
-    if (role == 'admin') {
-      // Navigate to admin page
-    } else if (role == 'instructor') {
-      // Navigate to instructor page
-    }
-  } catch (e) {
-    print('Error: $e');
-  }
-}
-
-
-
-
-
-
-
-
- */
-
-
-      await auth.createUserWithEmailAndPassword(
+      // Create user in Firebase Authentication
+      UserCredential userCredential = await auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
-      // 3
+
+      // Store user role in Firestore
+      await firestore.collection('users').doc(userCredential.user!.uid).set({
+        'email': email,
+        'role': role,
+      });
+
       notifyListeners();
-      return null;
+      return null; // No error
     } on FirebaseAuthException catch (e) {
-      // 4
       if (email.isEmpty) {
         errorMsg = 'Email is blank.';
       } else if (password.isEmpty) {
@@ -111,32 +50,40 @@ Future<void> loginUser(String email, String password) async {
       }
       return errorMsg;
     } catch (e) {
-      // 5
       log(e.toString());
       return e.toString();
     }
   }
 
-  // 1
+  /// **Login method with role retrieval**
   Future<String?> login(String email, String password) async {
     try {
-      // 2
-      await auth.signInWithEmailAndPassword(
+      UserCredential userCredential = await auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      // 3
+
+      // Fetch user role from Firestore
+      DocumentSnapshot userDoc = await firestore
+          .collection('users')
+          .doc(userCredential.user!.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        return 'User role not found.';
+      }
+
+      String role = userDoc['role'];
+      log('User logged in as: $role');
+
       notifyListeners();
       return null;
     } on FirebaseAuthException catch (e) {
-      // 4
       if (email.isEmpty) {
         errorMsg = 'Email is blank.';
       } else if (password.isEmpty) {
         errorMsg = 'Password is blank.';
-      }
-
-      else if (e.code == 'invalid-email') {
+      } else if (e.code == 'invalid-email') {
         errorMsg = 'Invalid email.';
       } else if (e.code == 'INVALID_LOGIN_CREDENTIALS') {
         errorMsg = 'Invalid credentials.';
@@ -147,14 +94,50 @@ Future<void> loginUser(String email, String password) async {
       }
       return errorMsg;
     } catch (e) {
-      // 5
       log(e.toString());
       return e.toString();
     }
   }
 
-  void logout() async {
+  /// **Fetch logged-in user's role**
+  Future<String?> getUserRole() async {
+    if (auth.currentUser == null) return null;
+
+    DocumentSnapshot userDoc =
+    await firestore.collection('users').doc(auth.currentUser!.uid).get();
+
+    if (userDoc.exists) {
+      return userDoc['role'];
+    }
+    return null;
+  }
+
+
+
+  /// **Send password reset email**
+  Future<String?> resetPassword(String email) async {
+    try {
+      await auth.sendPasswordResetEmail(email: email);
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'invalid-email') {
+        return 'Invalid email address.';
+      } else if (e.code == 'user-not-found') {
+        return 'No user found with this email.';
+      }
+      return 'Something went wrong. Please try again.';
+    } catch (e) {
+      log(e.toString());
+      return e.toString();
+    }
+  }
+
+
+
+
+  Future<void> logout() async {
     await auth.signOut();
     notifyListeners();
+
   }
 }

@@ -108,7 +108,12 @@ class _StateLoginPage extends   State<LoginPage> {
                   Positioned(
                     top: 32,
                     right: 16,
-                    child: adminbtn(),
+                    child:Container(
+                      margin: EdgeInsets.only(top: 25),
+                   child:    adminbtn(),
+          )
+
+
                   ),
 
 
@@ -186,6 +191,8 @@ class _StateLoginPage extends   State<LoginPage> {
       onTap: () {
         setState(() {
           is_active = !is_active;
+
+
         });
       },
     );

@@ -25,3 +25,7 @@ enum YummyTab {
   const YummyTab(this.value);
   final int value;
 }
+
+Widget line()=>Divider();
+
+Widget sizeh5()=> SizedBox(height: 5);
