@@ -19,7 +19,7 @@ import 'constants.dart';
 import 'data/providers.dart';
 import 'firebase_options.dart';
 
-
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 Future<void> main() async {
   SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,15 +104,29 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
       ),
       GoRoute(
         path: '/scheduling',
-        builder: (context, state) => CourseSchedulingScreen(),
+        builder: (context, state) => CourseSchedulingScreen(
+          changeTheme: changeThemeMode,
+          changeColor: changeColor,
+          colorSelected: colorSelected,
+        ),
       ),
       GoRoute(
         path: '/conflicts',
-        builder: (context, state) => ConflictDetectionScreen(),
+        builder: (context, state) => ConflictDetectionScreen(
+          changeTheme: changeThemeMode,
+          changeColor: changeColor,
+          colorSelected: colorSelected,
+
+        ),
       ),
       GoRoute(
         path: '/reports',
-        builder: (context, state) => ReportsScreen(),
+        builder: (context, state) => ReportScreen(
+          changeTheme: changeThemeMode,
+          changeColor: changeColor,
+          colorSelected: colorSelected,
+        )
+        ,
       ),
     ],
     errorPageBuilder: (context, state) {
@@ -181,6 +195,7 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
       theme: ThemeData(
         colorSchemeSeed: colorSelected.color,
         useMaterial3: true,
+
         brightness: Brightness.light,
       ),
       darkTheme: ThemeData(

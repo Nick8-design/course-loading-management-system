@@ -1,118 +1,299 @@
+
+
+import 'dart:math';
+
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 
-
-
-
-
-
-
-
-
-// Firestore Provider for Courses
-final coursesProvider = StreamProvider((ref) {
-  return FirebaseFirestore.instance.collection('courses').snapshots();
-});
+import '../components/app_bar.dart';
+import '../components/mybutton.dart';
+import '../components/nav_drawer.dart';
+import '../constants.dart';
+import '../main.dart';
+import 'course_scheduling.dart';
 
 class ConflictDetectionScreen extends ConsumerWidget {
+
+  final ColorSelection colorSelected;
+  final void Function(bool useLightMode) changeTheme;
+  final void Function(int value) changeColor;
+
+  const ConflictDetectionScreen({
+    super.key,
+    required this.changeTheme,
+    required this.changeColor,
+    required this.colorSelected,
+  });
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final coursesStream = ref.watch(coursesProvider);
-
     return Scaffold(
-      appBar: AppBar(title: Text('Conflict Detection')),
-      body: coursesStream.when(
-        loading: () => Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error: $err')),
-        data: (coursesSnapshot) {
-          if (coursesSnapshot.docs.isEmpty) {
-            return Center(child: Text('No courses available.'));
-          }
+      drawer: NavDrawer(),
+      appBar:  PreferredSize(
+        preferredSize: Size.fromHeight(120),
+        child: App_Bar(
+            changeTheme:changeTheme,
+            changeColor:changeColor,
+            colorSelected:colorSelected,
+            title:"Conflict Resolution"
 
-          // Check for conflicts (overlapping schedules)
-          List<QueryDocumentSnapshot> conflicts = _detectConflicts(coursesSnapshot.docs);
+        ),
+      ),
 
-          return conflicts.isEmpty
-              ? Center(child: Text('No schedule conflicts detected.'))
-              : ListView(
-            children: conflicts.map((doc) {
-              var course = doc.data() as Map<String, dynamic>; // FIX: Explicit Cast
-              return ListTile(
-                title: Text(course['title'] ?? "No Title"), // FIX: Handle null title
-                subtitle: Text(
-                  'Instructor: ${course['assignedInstructor'] ?? "Unassigned"}\nSchedule: ${course['schedule'] ?? "Not Set"}',
-                ), // FIX: Handle null instructor & schedule
-                trailing: IconButton(
-                  icon: Icon(Icons.warning, color: Colors.red),
-                  onPressed: () => _resolveConflict(context, doc),
-                ),
-              );
-            }).toList(),
-          );
-        },
+
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+
+
+        child: CustomScrollView(
+          slivers: [
+           SliverToBoxAdapter( child:_buildConflictPieChart() ,) ,
+           SliverToBoxAdapter(child:SizedBox(height: 20)),
+         SliverToBoxAdapter(child:    _buildConflictList()),
+            SliverToBoxAdapter(child:SizedBox(height: 20)),
+       SliverToBoxAdapter(child:    _buildConflictActions(context)),
+          ],
+
+
+        ),
+
+
+
       ),
     );
   }
 
-  List<QueryDocumentSnapshot> _detectConflicts(List<QueryDocumentSnapshot> courses) {
-    Map<String, List<QueryDocumentSnapshot>> scheduleMap = {};
+  /// 📌 **Conflict Pie Chart**
+  Widget _buildConflictPieChart() {
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance.collection('courses').snapshots(),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (!snapshot.hasData) return CircularProgressIndicator();
 
-    for (var doc in courses) {
+        int totalCourses = snapshot.data!.docs.length;
+        int conflictedCourses =
+            snapshot.data!.docs.where((doc) => doc['conflict'] == true).length;
+        int nonConflictedCourses = totalCourses - conflictedCourses;
 
-      var course = doc.data() as Map<String, dynamic>; // FIX: Explicit Cast
-
-      _sendConflictNotification(course['title']);
-      String? schedule = course['schedule'] as String?;
-      if (schedule == null) continue;
-
-      if (scheduleMap.containsKey(schedule)) {
-        scheduleMap[schedule]!.add(doc);
-      } else {
-        scheduleMap[schedule] = [doc];
-      }
-    }
-
-    return scheduleMap.values.where((list) => list.length > 1).expand((list) => list).toList();
+        return Column(
+          children: [
+            Text("Overall Performance", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            AspectRatio(
+              aspectRatio: 1.5,
+              child: PieChart(
+                PieChartData(
+                  sections: [
+                    PieChartSectionData(
+                      value: conflictedCourses.toDouble(),
+                      title: "Conflicted ($conflictedCourses)",
+                      color: Colors.red,
+                      radius: 50,
+                    ),
+                    PieChartSectionData(
+                      value: nonConflictedCourses.toDouble(),
+                      title: "No Conflict ($nonConflictedCourses)",
+                      color: Colors.green,
+                      radius: 50,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 
-  void _resolveConflict(BuildContext context, QueryDocumentSnapshot doc) {
-    final _scheduleController = TextEditingController(text: doc.get('schedule') ?? '');
+  /// 📌 **List of Conflicts**
+  Widget _buildConflictList() {
+    return StreamBuilder(
+      stream: FirebaseFirestore.instance
+          .collection('courses')
+          .where('conflict', isEqualTo: true)
+          .snapshots(),
+      builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+        if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+          return Center(child: Text("No Conflicts Found"));
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Types of Conflicts", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ListView(
+              shrinkWrap: true,
+              children:
+        //           SingleChildScrollView(
+        //
+        // child:
+        snapshot.data!.docs.map((doc) {
+                var data = doc.data() as Map<String, dynamic>;
+                return ListTile(
+                  title: Text("${data['courseCode']} - ${data['assignedInstructor']}"),
+                  subtitle: Text("Room: ${data['room']}, Time: ${data['time']}"),
+                  trailing: ElevatedButton(
+                    onPressed: () => _showFixConflictDialog(context, doc.id, data),
+                    child: Text("Fix"),
+                  ),
+                );
+              }).toList(),
+
+
+           ),
+          ]
+        );
+      },
+    );
+  }
+
+  /// 📌 **Conflict Resolution Actions**
+  Widget _buildConflictActions(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        ScheduleOperationWidget(
+          icon: Icons.auto_fix_high,
+          name: 'Auto-Fix Conflicts',
+          onTap: () {
+            _autoFixConflicts();
+          },
+        ),
+        // ElevatedButton.icon(
+        //   icon: Icon(Icons.auto_fix_high),
+        //   label: Text("Auto-Fix Conflicts"),
+        //   onPressed: () => _autoFixConflicts(),
+        // ),
+        SizedBox(height: 30),
+        // ElevatedButton.icon(
+        //   icon: Icon(Icons.edit),
+        //   label: Text("Fix Manually"),
+        //   onPressed: () {},
+        // ),
+      ],
+    );
+  }
+
+  /// 📌 **Fix Conflict Manually**
+  void _showFixConflictDialog(BuildContext context, String courseId, Map<String, dynamic> data) async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+    QuerySnapshot instructorSnapshot = await firestore.collection('instructors').get();
+    List<QueryDocumentSnapshot> instructors = instructorSnapshot.docs;
+
+    String? selectedInstructor;
+    String? selectedRoom;
+    String? selectedTime;
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Resolve Conflict: ${doc.get('title') ?? "No Title"}'), // FIX: Handle null title
-        content: TextField(controller: _scheduleController, decoration: InputDecoration(labelText: 'New Schedule')),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
-          ElevatedButton(
-            onPressed: () {
-              _updateSchedule(doc.id, _scheduleController.text);
-              Navigator.pop(context);
-            },
-            child: Text('Save'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text("Fix Conflict for ${data['courseCode']}"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<String>(
+                    decoration: InputDecoration(labelText: "Change Instructor"),
+                    items: instructors.map((instructor) {
+                      return DropdownMenuItem<String>( // ✅ Explicitly set to String
+                        value: instructor['name'] as String,  // ✅ Ensure it's a String
+                        child: Text(instructor['name'] as String),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedInstructor = value;
+                      });
+                    },
+                  ),
+
+                  SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    decoration: InputDecoration(labelText: "Change Room"),
+                    items: roomList.map((room) {
+                      return DropdownMenuItem(
+                        value: room,
+                        child: Text(room),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedRoom = value;
+                      });
+                    },
+                  ),
+                  SizedBox(height: 10),
+                  DropdownButtonFormField<String>(
+                    decoration: InputDecoration(labelText: "Change Time Slot"),
+                    items: timeSlots.map((time) {
+                      return DropdownMenuItem(
+                        value: time,
+                        child: Text(time),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        selectedTime = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context), child: Text("Cancel")),
+                ElevatedButton(
+                  onPressed: () async {
+                    await firestore.collection('courses').doc(courseId).update({
+                      'assignedInstructor': selectedInstructor ?? data['assignedInstructor'],
+                      'room': selectedRoom ?? data['room'],
+                      'time': selectedTime ?? data['time'],
+                      'conflict': false,
+
+                    });
+
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Conflict Fixed Successfully!")),
+                    );
+
+                  },
+                  child: Text("Save"),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
-  void _updateSchedule(String courseId, String newSchedule) {
-    FirebaseFirestore.instance.collection('courses').doc(courseId).update({
-      'schedule': newSchedule,
-    });
-  }
+  /// 📌 **Auto-Fix Conflicts**
+  void _autoFixConflicts() async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    QuerySnapshot courseSnapshot = await firestore
+        .collection('courses')
+        .where('conflict', isEqualTo: true)
+        .get();
 
+    for (var doc in courseSnapshot.docs) {
+      String newRoom = roomList[Random().nextInt(roomList.length)];
+      String newTime = timeSlots[Random().nextInt(timeSlots.length)];
 
-  void _sendConflictNotification(String courseTitle) {
-    FirebaseMessaging.instance.subscribeToTopic('conflicts'); // Subscribe to the topic
+      await firestore.collection('courses').doc(doc.id).update({
+        'room': newRoom,
+        'time': newTime,
+        'conflict': false,
+      });
+    }
 
-    FirebaseMessaging.instance.sendMessage(
-      to: '/topics/conflicts',
-      data: {"title": "Schedule Conflict", "body": "Conflict detected in $courseTitle"},
+    ScaffoldMessenger.of(navigatorKey.currentContext!).showSnackBar(
+      SnackBar(content: Text("All conflicts fixed automatically!")),
     );
   }
+
 
 }
