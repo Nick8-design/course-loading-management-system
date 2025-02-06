@@ -2,6 +2,7 @@
 
 import 'dart:math';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,6 +12,7 @@ import '../components/app_bar.dart';
 import '../components/mybutton.dart';
 import '../components/nav_drawer.dart';
 import '../constants.dart';
+import '../data/providers.dart';
 import '../main.dart';
 import 'course_scheduling.dart';
 
@@ -19,15 +21,17 @@ class ConflictDetectionScreen extends ConsumerWidget {
   final ColorSelection colorSelected;
   final void Function(bool useLightMode) changeTheme;
   final void Function(int value) changeColor;
-
+final bool IsAdmin;
   const ConflictDetectionScreen({
     super.key,
+    required this.IsAdmin,
     required this.changeTheme,
     required this.changeColor,
     required this.colorSelected,
   });
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+
     return Scaffold(
       drawer: NavDrawer(),
       appBar:  PreferredSize(
@@ -133,10 +137,15 @@ class ConflictDetectionScreen extends ConsumerWidget {
                 return ListTile(
                   title: Text("${data['courseCode']} - ${data['assignedInstructor']}"),
                   subtitle: Text("Room: ${data['room']}, Time: ${data['time']}"),
-                  trailing: ElevatedButton(
+                  trailing:
+                      IsAdmin?
+                  ElevatedButton(
                     onPressed: () => _showFixConflictDialog(context, doc.id, data),
                     child: Text("Fix"),
-                  ),
+                  ):
+                  Text('')
+
+
                 );
               }).toList(),
 
@@ -153,19 +162,23 @@ class ConflictDetectionScreen extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
+        IsAdmin?
         ScheduleOperationWidget(
           icon: Icons.auto_fix_high,
           name: 'Auto-Fix Conflicts',
           onTap: () {
             _autoFixConflicts();
           },
+        ):
+        ElevatedButton.icon(
+          icon: Icon(Icons.bus_alert),
+          label: Text("Report Conflict"),
+          onPressed: () => _reportConflict(context),
+
         ),
-        // ElevatedButton.icon(
-        //   icon: Icon(Icons.auto_fix_high),
-        //   label: Text("Auto-Fix Conflicts"),
-        //   onPressed: () => _autoFixConflicts(),
-        // ),
-        SizedBox(height: 30),
+
+
+        SizedBox(height: 40),
         // ElevatedButton.icon(
         //   icon: Icon(Icons.edit),
         //   label: Text("Fix Manually"),
@@ -295,5 +308,26 @@ class ConflictDetectionScreen extends ConsumerWidget {
     );
   }
 
+  void _reportConflict(context) async {
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
+    final FirebaseAuth auth = FirebaseAuth.instance;
+
+    User? user = auth.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("You must be logged in!")));
+      return;
+    }
+
+    // Store conflict report in Firestore
+    await firestore.collection('conflict_reports').add({
+      'reportedBy': user.email ?? "Unknown Instructor",
+      'timestamp': FieldValue.serverTimestamp(),
+      'message': "Scheduling conflict detected!",
+      'status': "Pending",
+    });
+
+    // Show confirmation message
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Conflict reported to admin!")));
+  }
 
 }

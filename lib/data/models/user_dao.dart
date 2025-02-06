@@ -82,7 +82,7 @@ class UserDao extends ChangeNotifier {
       if (email.isEmpty) {
         errorMsg = 'Email is blank.';
       } else if (password.isEmpty) {
-        errorMsg = 'Password is blank.';
+        errorMsg = 'Password is blank. Provide correct details';
       } else if (e.code == 'invalid-email') {
         errorMsg = 'Invalid email.';
       } else if (e.code == 'INVALID_LOGIN_CREDENTIALS') {
@@ -100,7 +100,7 @@ class UserDao extends ChangeNotifier {
   }
 
   /// **Fetch logged-in user's role**
-  Future<String?> getUserRole() async {
+ Future<String?> getUserRole() async {
     if (auth.currentUser == null) return null;
 
     DocumentSnapshot userDoc =

@@ -41,6 +41,8 @@ dependencies:
   printing: ^5.14.0
   flutter_email_sender: ^6.0.3
 
+  url_launcher: ^6.3.1
+
 
 
 

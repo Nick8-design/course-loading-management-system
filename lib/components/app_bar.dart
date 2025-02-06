@@ -2,12 +2,14 @@ import 'package:course_loading_system/components/theme_button.dart';
 import 'package:course_loading_system/components/wavyappbarclipper.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../constants.dart';
+import '../data/providers.dart';
 import 'color_button.dart';
 
-class App_Bar extends StatefulWidget{
+class App_Bar extends ConsumerStatefulWidget{
   final ColorSelection colorSelected;
   final void Function(bool useLightMode) changeTheme;
   final void Function(int value) changeColor;
@@ -21,19 +23,16 @@ class App_Bar extends StatefulWidget{
     required this.title,
   });
   @override
-  State<App_Bar> createState() {
+  ConsumerState<App_Bar> createState() {
  return _StateAppBar();
   }
 
 }
-class _StateAppBar extends State<App_Bar> {
+class _StateAppBar extends ConsumerState<App_Bar> {
   @override
   Widget build(BuildContext context) {
+    final userDao = ref.watch(userDaoProvider);
    return
-   // Container(
-   //   width: 120,
-   //   child:
-   //
 
      ClipPath(
        clipper: WavyAppBarClipper(),
@@ -46,6 +45,8 @@ class _StateAppBar extends State<App_Bar> {
            ColorButton(changeColor: widget.changeColor, colorSelected: widget.colorSelected),
            IconButton(
              onPressed: () async {
+               userDao.logout();
+               await Future.delayed(Duration(milliseconds: 1));
                context.go('/login');
              },
              icon: Icon(Icons.logout_sharp),

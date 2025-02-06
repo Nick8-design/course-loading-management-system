@@ -1,10 +1,13 @@
 import 'dart:ui';
 
+import 'package:course_loading_system/pages/aboutus.dart';
 import 'package:course_loading_system/pages/conflict_detection.dart';
 import 'package:course_loading_system/pages/course_scheduling.dart';
 import 'package:course_loading_system/pages/dashboard.dart';
+import 'package:course_loading_system/pages/help.dart';
 import 'package:course_loading_system/pages/instructor_mgt.dart';
 import 'package:course_loading_system/pages/login_page.dart';
+import 'package:course_loading_system/pages/rateus.dart';
 import 'package:course_loading_system/pages/register_page.dart';
 import 'package:course_loading_system/pages/reports.dart';
 import 'package:course_loading_system/security/auth.dart';
@@ -64,9 +67,11 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
   ThemeMode themeMode = ThemeMode.light;
   ColorSelection colorSelected = ColorSelection.blue;
 
-  /// Authentication to manage user login session
 
+bool IsAdmin(){
 
+  return ref.watch(userRoleProvider).value=="Admin"? true:false;
+}
 
 
 
@@ -96,6 +101,7 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
         path: '/instructor',
         builder: (context, state) {
           return InstructorMgt(
+            isAdmin:  IsAdmin(),
             changeTheme: changeThemeMode,
             changeColor: changeColor,
             colorSelected: colorSelected,
@@ -105,6 +111,7 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
       GoRoute(
         path: '/scheduling',
         builder: (context, state) => CourseSchedulingScreen(
+          isAdmin:  IsAdmin(),
           changeTheme: changeThemeMode,
           changeColor: changeColor,
           colorSelected: colorSelected,
@@ -113,6 +120,7 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
       GoRoute(
         path: '/conflicts',
         builder: (context, state) => ConflictDetectionScreen(
+          IsAdmin:  IsAdmin(),
           changeTheme: changeThemeMode,
           changeColor: changeColor,
           colorSelected: colorSelected,
@@ -121,13 +129,52 @@ class _LoadingAppState extends ConsumerState<LoadingApp> {
       ),
       GoRoute(
         path: '/reports',
+
         builder: (context, state) => ReportScreen(
+          isAdmin:  IsAdmin(),
           changeTheme: changeThemeMode,
           changeColor: changeColor,
           colorSelected: colorSelected,
         )
         ,
+
       ),
+      GoRoute(
+        path: '/help',
+        builder: (context, state) => HelpPage(
+          isAdmin:  IsAdmin(),
+          changeTheme: changeThemeMode,
+          changeColor: changeColor,
+          colorSelected: colorSelected,
+
+        )
+        ,
+
+      ),
+      GoRoute(
+        path: '/about',
+        builder: (context, state) => AboutUsPage(
+          changeTheme: changeThemeMode,
+          changeColor: changeColor,
+          colorSelected: colorSelected,
+
+        )
+        ,
+
+      ),  GoRoute(
+        path: '/rate',
+        builder: (context, state) =>  RateUsPage(
+          changeTheme: changeThemeMode,
+          changeColor: changeColor,
+          colorSelected: colorSelected,
+
+        )
+        ,
+
+      ),
+
+
+
     ],
     errorPageBuilder: (context, state) {
       return MaterialPage(

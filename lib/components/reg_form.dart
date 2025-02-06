@@ -1,3 +1,4 @@
+import 'package:course_loading_system/components/password.dart';
 import 'package:course_loading_system/data/providers.dart';
 import 'package:course_loading_system/data/streams.dart';
 import 'package:flutter/material.dart';
@@ -230,7 +231,7 @@ class _StateRegForm extends   ConsumerState<RegForm> {
                 final errorMessage = await userDao.signup(
                   _emailController.text,
                   _passwordConfirm.text == _passwordController.text ?
-                  _passwordController.text
+                  hashPassword(_passwordController.text)
                       : '',
                   ref.watch(selectedNameProvider),
 
@@ -240,7 +241,8 @@ class _StateRegForm extends   ConsumerState<RegForm> {
                 if (_formKey.currentState!.validate()) {
                   final errorMessage = await userDao.login(
                     _emailController.text,
-                    _passwordController.text,
+                  //  _passwordController.text,
+                     hashPassword(_passwordController.text)
                   );
 
 

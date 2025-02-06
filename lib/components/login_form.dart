@@ -1,3 +1,4 @@
+import 'package:course_loading_system/components/password.dart';
 import 'package:course_loading_system/pages/dashboard.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,8 +12,10 @@ import '../pages/register_page.dart';
 import '../pages/reset_pass.dart';
 
 class LoginForm extends ConsumerStatefulWidget {
-  LoginForm({ super.key});
- // final ValueChanged<Credentials> onLogIn;
+  LoginForm( { required this.roles,super.key});
+
+
+final String roles;
 
   @override
   ConsumerState<LoginForm> createState() => _StateLoginForm();
@@ -304,7 +307,12 @@ Form(
             if (_formKeylogin.currentState!.validate()) {
               final errorMessage = await userDao.login(
                 _emailController.text,
-                _passwordController.text,
+
+                  ref.watch(userRoleProvider).value== widget.roles?
+                      hashPassword(_passwordController.text):""
+
+
+
               );
 
 
@@ -312,6 +320,7 @@ Form(
                 await Future.delayed(Duration(milliseconds: 2)); // Small delay to ensure auth state update
                // if (mounted) {
                 //  checkUserRole();
+
                   context.go('/dashboard');
                // }
               } else {
@@ -377,7 +386,7 @@ Text("Or",style: TextStyle(
 
            ScaffoldMessenger.of(context).showSnackBar(
              SnackBar(
-               content: Text("Pressed reg"),
+               content: Text("Build with security in mind"),
                duration: const Duration(milliseconds: 700),
              ),
            );

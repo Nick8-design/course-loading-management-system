@@ -1,6 +1,8 @@
+
 import 'dart:math';
 
 import 'package:course_loading_system/components/app_bar.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -8,9 +10,9 @@ import 'package:go_router/go_router.dart';
 
 import '../components/color_button.dart';
 import '../components/nav_drawer.dart';
-import '../components/theme_button.dart';
-import '../components/wavyappbarclipper.dart';
+
 import '../constants.dart';
+import '../data/providers.dart';
 
 final instructorsProvider = StreamProvider((ref) {
   return FirebaseFirestore.instance.collection('instructors').snapshots();
@@ -20,9 +22,12 @@ class InstructorMgt extends ConsumerStatefulWidget {
   final ColorSelection colorSelected;
   final void Function(bool useLightMode) changeTheme;
   final void Function(int value) changeColor;
+final bool isAdmin;
 
   const InstructorMgt({
+
     super.key,
+    required this.isAdmin,
     required this.changeTheme,
     required this.changeColor,
     required this.colorSelected,
@@ -31,6 +36,7 @@ class InstructorMgt extends ConsumerStatefulWidget {
   @override
   _InstructorMgtState createState() => _InstructorMgtState();
 }
+
 
 class _InstructorMgtState extends ConsumerState<InstructorMgt> {
   final TextEditingController _searchController = TextEditingController();
@@ -105,29 +111,36 @@ class _InstructorMgtState extends ConsumerState<InstructorMgt> {
 
   @override
   Widget build(BuildContext context) {
+
+
     final instructorsStream = ref.watch(instructorsProvider);
 
     return Scaffold(
       drawer: NavDrawer(),
 
       appBar:  PreferredSize(
-    preferredSize: Size.fromHeight(120),
-    child: App_Bar(
-          changeTheme: widget.changeTheme,
-          changeColor: widget.changeColor,
-          colorSelected: widget.colorSelected,
-          title: "Instructor management"
+        preferredSize: Size.fromHeight(120),
+        child: App_Bar(
+            changeTheme: widget.changeTheme,
+            changeColor: widget.changeColor,
+            colorSelected: widget.colorSelected,
+            title: "Instructor management"
 
-      ),
+        ),
       ),
 
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton:
+      widget.isAdmin?
+      FloatingActionButton(
         onPressed: () =>
-            //assignCoursesToInstructors(),
-            //generateInstructors(),
-          _showInstructorDialog(),
+        //assignCoursesToInstructors(),
+        //generateInstructors(),
+        _showInstructorDialog(),
         child: Icon(Icons.add),
-      ),
+      ):
+      Text("Welcome")
+
+      ,
       body: Padding(
         padding: EdgeInsets.all(16),
         child: Column(
@@ -160,60 +173,74 @@ class _InstructorMgtState extends ConsumerState<InstructorMgt> {
 
   /// 📌 **Instructor Table**
   Widget _buildInstructorTable(AsyncValue<QuerySnapshot> instructorsStream) {
-      return SingleChildScrollView(
+
+
+    return SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child:
 
-      instructorsStream.when(
-      loading: () => Center(child: CircularProgressIndicator()),
-      error: (err, stack) => Center(child: Text('Error: $err')),
-      data: (instructorsSnapshot) {
-        List<QueryDocumentSnapshot> instructors = instructorsSnapshot.docs.where((doc) {
-          var data = doc.data() as Map<String, dynamic>;
-          return data['instructorID'].toString().toLowerCase().contains(_searchQuery) ||
-              data['name'].toString().toLowerCase().contains(_searchQuery) ||
-              data['email'].toString().toLowerCase().contains(_searchQuery) ||
-              data['workload'].toString().toLowerCase().contains(_searchQuery) ||
-              (data['assignedCourses'] as List<dynamic>?)
+        instructorsStream.when(
+          loading: () => Center(child: CircularProgressIndicator()),
+          error: (err, stack) => Center(child: Text('Error: $err')),
+          data: (instructorsSnapshot) {
+            List<QueryDocumentSnapshot> instructors = instructorsSnapshot.docs.where((doc) {
+              var data = doc.data() as Map<String, dynamic>;
+              return data['instructorID'].toString().toLowerCase().contains(_searchQuery) ||
+                  data['name'].toString().toLowerCase().contains(_searchQuery) ||
+                  data['email'].toString().toLowerCase().contains(_searchQuery) ||
+                  data['workload'].toString().toLowerCase().contains(_searchQuery) ||
+                  (data['assignedCourses'] as List<dynamic>?)
                   !.any((course) => course.toString().toLowerCase().contains(_searchQuery)) ?? false;
-        }).toList();
+            }).toList();
 
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: DataTable(
-            columnSpacing: 15,
-            columns: [
-              DataColumn(label: Text("#")),
-              DataColumn(label: Text("Name")),
-              DataColumn(label: Text("ID")),
-              DataColumn(label: Text("Email")),
-              DataColumn(label: Text("Courses")),
-              DataColumn(label: Text("Workload")),
-              DataColumn(label: Text("Actions")),
-            ],
-            rows: instructors.asMap().entries.map((entry) {
-              int index = entry.key + 1;
-              var instructor = entry.value.data() as Map<String, dynamic>;
+            return SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: DataTable(
+                columnSpacing: 15,
+                columns: [
+                  DataColumn(label: Text("#")),
+                  DataColumn(label: Text("Name")),
+                  DataColumn(label: Text("ID")),
+                  DataColumn(label: Text("Email")),
+                  DataColumn(label: Text("Courses")),
+                  DataColumn(label: Text("Workload")),
+                  widget.isAdmin?
+                  DataColumn(label: Text("Actions")):DataColumn(label: Text(""))
 
-              return DataRow(cells: [
-                DataCell(Text("$index")),
-                DataCell(Text(instructor['name'] ?? "N/A")),
-                DataCell(Text(instructor['instructorID'] ?? "N/A")),
-                DataCell(Text(instructor['email'] ?? "N/A")),
-                DataCell(Text((instructor['assignedCourses'] as List<dynamic>?)?.join(", ") ?? "N/A")),
-                DataCell(Text("${instructor['workload'] ?? 0} hrs")),
-                DataCell(Row(
-                  children: [
-                    IconButton(icon: Icon(Icons.edit, color: Colors.blue), onPressed: () => _showInstructorDialog(doc: entry.value)),
-                    IconButton(icon: Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteInstructor(entry.value.id)),
-                  ],
-                )),
-              ]);
-            }).toList(),
-          ),
-        );
-      },
-      )
+                ],
+                rows: instructors.asMap().entries.map((entry) {
+                  int index = entry.key + 1;
+                  var instructor = entry.value.data() as Map<String, dynamic>;
+
+                  return DataRow(cells: [
+                    DataCell(Text("$index")),
+                    DataCell(Text(instructor['name'] ?? "N/A")),
+                    DataCell(Text(instructor['instructorID'] ?? "N/A")),
+                    DataCell(Text(instructor['email'] ?? "N/A")),
+                    DataCell(Text((instructor['assignedCourses'] as List<dynamic>?)?.join(", ") ?? "N/A")),
+                    DataCell(Text("${instructor['workload'] ?? 0} hrs")),
+
+                    widget.isAdmin?
+                    DataCell(
+                        Row(
+                      children: [
+                        IconButton(icon: Icon(Icons.edit, color: Colors.blue), onPressed: () => _showInstructorDialog(doc: entry.value)),
+                        IconButton(icon: Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteInstructor(entry.value.id)),
+                      ],
+                    )
+
+                    ):  DataCell(Text(""))
+
+
+
+                  ]);
+
+
+                }).toList(),
+              ),
+            );
+          },
+        )
     );
   }
 
@@ -235,17 +262,17 @@ class _InstructorMgtState extends ConsumerState<InstructorMgt> {
           child:
           Form(
             key:_formKey ,
-          child:
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildInputField(_idController, 'ID',false),
-              _buildInputField(_nameController, 'Name',false),
-              _buildInputField(_emailController, 'Email',false),
-              _buildInputField(_coursesController, 'Courses (Comma Separated)',false),
-              _buildInputField(_workloadController, 'Workload (hours)',true),
-            ],
-          ),
+            child:
+            Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildInputField(_idController, 'ID',false),
+                _buildInputField(_nameController, 'Name',false),
+                _buildInputField(_emailController, 'Email',false),
+                _buildInputField(_coursesController, 'Courses (Comma Separated)',false),
+                _buildInputField(_workloadController, 'Workload (hours)',true),
+              ],
+            ),
 
           ),
         ),
@@ -253,19 +280,19 @@ class _InstructorMgtState extends ConsumerState<InstructorMgt> {
           TextButton(onPressed: () => Navigator.pop(context), child: Text('Cancel')),
           ElevatedButton(
             onPressed: () {
-             if( _formKey.currentState!.validate()) {
-               if (doc == null) {
-                 _addInstructor(_idController.text, _nameController.text,
-                     _emailController.text, _coursesController.text,
-                     _workloadController.text);
-               } else {
-                 _updateInstructor(
-                     doc.id, _idController.text, _nameController.text,
-                     _emailController.text, _coursesController.text,
-                     _workloadController.text);
-               }
-               Navigator.pop(context);
-             }
+              if( _formKey.currentState!.validate()) {
+                if (doc == null) {
+                  _addInstructor(_idController.text, _nameController.text,
+                      _emailController.text, _coursesController.text,
+                      _workloadController.text);
+                } else {
+                  _updateInstructor(
+                      doc.id, _idController.text, _nameController.text,
+                      _emailController.text, _coursesController.text,
+                      _workloadController.text);
+                }
+                Navigator.pop(context);
+              }
             },
             child: Text('Save'),
           ),

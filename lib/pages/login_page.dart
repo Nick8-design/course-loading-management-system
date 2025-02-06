@@ -61,7 +61,7 @@ class _StateLoginPage extends   State<LoginPage> {
                       child:
                       ListView(
           children: [
-              LoginForm()
+              LoginForm(roles: roles,)
           ]
 
 
@@ -95,7 +95,7 @@ class _StateLoginPage extends   State<LoginPage> {
                         child:
                         ListView(
                             children: [
-                              LoginForm()
+                              LoginForm(roles: roles,)
                             ]
 
 
@@ -141,6 +141,7 @@ class _StateLoginPage extends   State<LoginPage> {
   }
 
   bool is_active = false;
+  String roles='Admin';
 
   Widget adbtn() {
     return GestureDetector(
@@ -191,6 +192,7 @@ class _StateLoginPage extends   State<LoginPage> {
       onTap: () {
         setState(() {
           is_active = !is_active;
+          roles='Admin';
 
 
         });
@@ -248,6 +250,7 @@ class _StateLoginPage extends   State<LoginPage> {
       onTap: () {
         setState(() {
           is_active = !is_active;
+          roles='Admin';
         });
       },
     );
@@ -269,7 +272,7 @@ class _StateLoginPage extends   State<LoginPage> {
         ),
         Positioned(
             right: 0,
-            child: LoginForm()
+            child: LoginForm(roles: roles,)
 
         )
 

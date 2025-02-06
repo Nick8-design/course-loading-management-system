@@ -9,6 +9,7 @@ import '../components/app_bar.dart';
 import '../components/mybutton.dart';
 import '../components/nav_drawer.dart';
 import '../constants.dart';
+import '../data/providers.dart';
 
 // Firestore Provider for Courses
 final coursesProvider = StreamProvider((ref) {
@@ -17,7 +18,7 @@ final coursesProvider = StreamProvider((ref) {
 
 // List of 15 Fixed Rooms
 final List<String> roomList = [
-  "Room 101", "Room 102", "Room 103", "Room 104", "Room 105",
+  "Spd 004", "Room 102", "Room 103", "Room 104", "Room 105",
   "Room 106", "Room 107", "Room 108", "Room 109", "Room 110",
   "Room 111", "Room 112", "Room 113", "Room 114", "Room 115"
 ];
@@ -29,16 +30,26 @@ class CourseSchedulingScreen extends ConsumerWidget {
   final ColorSelection colorSelected;
   final void Function(bool useLightMode) changeTheme;
   final void Function(int value) changeColor;
+final bool isAdmin;
 
   const CourseSchedulingScreen({
     super.key,
+    required this.isAdmin,
     required this.changeTheme,
     required this.changeColor,
     required this.colorSelected,
   });
 
+
+
+
+
+
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    bool admin=true;
+
     final coursesStream = ref.watch(coursesProvider);
 
     return Scaffold(
@@ -62,7 +73,7 @@ class CourseSchedulingScreen extends ConsumerWidget {
         padding: const EdgeInsets.all(16.0),
         child: ListView(
           children: [
-            _buildActionButtons(context),
+            _buildActionButtons(context,admin),
             SizedBox(height: 20),
             Expanded(child: _buildScheduleTable(ref, coursesStream)),
             SizedBox(height: 16),
@@ -76,11 +87,11 @@ class CourseSchedulingScreen extends ConsumerWidget {
   }
 
   /// 📌 **Top Action Buttons**
-  Widget _buildActionButtons(BuildContext context) {
+  Widget _buildActionButtons(BuildContext context,role) {
     return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child:
-
+isAdmin?
       Row(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
@@ -115,6 +126,10 @@ class CourseSchedulingScreen extends ConsumerWidget {
 
       ],
     )
+        :
+    Text("General Schedule",style: TextStyle(fontSize: 22),)
+
+
     );
 
   }

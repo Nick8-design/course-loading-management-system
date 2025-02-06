@@ -11,41 +11,41 @@ import 'dart:io';
 import '../components/app_bar.dart';
 import '../components/nav_drawer.dart';
 import '../constants.dart';
+import '../data/providers.dart';
 
 class ReportScreen extends ConsumerWidget {
-
   final ColorSelection colorSelected;
   final void Function(bool useLightMode) changeTheme;
   final void Function(int value) changeColor;
-
+final bool isAdmin;
   const ReportScreen({
     super.key,
+    required this.isAdmin,
     required this.changeTheme,
     required this.changeColor,
     required this.colorSelected,
   });
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+
+
     return Scaffold(
       drawer: NavDrawer(),
-      appBar:  PreferredSize(
+      appBar: PreferredSize(
         preferredSize: Size.fromHeight(120),
         child: App_Bar(
-            changeTheme:changeTheme,
-            changeColor:changeColor,
-            colorSelected:colorSelected,
-            title:'Instructor Reports'
-
+          changeTheme: changeTheme,
+          changeColor: changeColor,
+          colorSelected: colorSelected,
+          title: 'Reports',
         ),
       ),
-
-     // appBar: AppBar(title: Text('Instructor Reports')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: ListView(
-        //  crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _buildInstructorTable(context)),
+            _buildInstructorTable(context),
             SizedBox(height: 20),
             _buildPrintButton("Print Instructor Table", _printInstructorTable),
             SizedBox(height: 20),
@@ -73,22 +73,32 @@ class ReportScreen extends ConsumerWidget {
               DataColumn(label: Text("Instructor ID")),
               DataColumn(label: Text("Total Workload")),
               DataColumn(label: Text("Courses Assigned")),
-              DataColumn(label: Text("Actions")),
+
+              isAdmin?
+              DataColumn(label: Text("Actions")): DataColumn(label: Text("")),
+
+
             ],
             rows: snapshot.data!.docs.map((doc) {
               Map<String, dynamic> instructor = doc.data() as Map<String, dynamic>;
               return DataRow(cells: [
                 DataCell(Text(instructor['name'] ?? "Unknown")),
-                DataCell(Text(instructor['instructorID'] ?? doc.id)), // Instructor ID
+                DataCell(Text(instructor['instructorID'] ?? doc.id)),
                 DataCell(Text("${instructor['workload'] ?? 0} hrs")),
                 DataCell(Text("${(instructor['assignedCourses'] as List?)?.length ?? 0} courses")),
                 DataCell(
+
+                  isAdmin?
                   ElevatedButton(
                     onPressed: () => _sendInstructorEmail(instructor),
                     child: Text("📩 Share"),
-                  ),
+                  ):Text('')
                 ),
+
+
               ]);
+
+
             }).toList(),
           ),
         );
@@ -105,7 +115,7 @@ class ReportScreen extends ConsumerWidget {
     );
   }
 
-  /// 📌 **Schedule Analysis Summary (Pie Chart + Detailed Information)**
+  /// 📌 **Schedule Analysis Summary**
   Widget _buildScheduleAnalysis() {
     return StreamBuilder(
       stream: FirebaseFirestore.instance.collection('courses').snapshots(),
@@ -142,7 +152,6 @@ class ReportScreen extends ConsumerWidget {
     );
   }
 
-  /// 📌 **Detailed Schedule Analysis Summary Below Pie Chart**
   Widget _buildSummaryDetails(int scheduled, int unscheduled, int conflicts, int resolvedConflicts) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,10 +164,10 @@ class ReportScreen extends ConsumerWidget {
     );
   }
 
-  /// 📌 **Print Instructor Table as PDF (Fixed)**
+  /// 📌 **Print Instructor Table as PDF**
   Future<void> _printInstructorTable() async {
     final pdf = pw.Document();
-    List<List> instructorData = await _fetchInstructorDataForPrint(); // ✅ Await inside an async function
+    List<List> instructorData = await _fetchInstructorDataForPrint();
 
     pdf.addPage(
       pw.Page(
@@ -168,7 +177,7 @@ class ReportScreen extends ConsumerWidget {
             pw.Table.fromTextArray(
               data: [
                 ["Instructor Name", "Instructor ID", "Total Workload", "Courses Assigned"],
-                ...instructorData, // ✅ No need for await here since data is already fetched
+                ...instructorData,
               ],
             ),
           ],
@@ -178,7 +187,6 @@ class ReportScreen extends ConsumerWidget {
 
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
-
 
   /// 📌 **Fetch Instructor Data for PDF Report**
   Future<List<List>> _fetchInstructorDataForPrint() async {
@@ -194,26 +202,31 @@ class ReportScreen extends ConsumerWidget {
     }).toList();
   }
 
-  /// 📌 **Print Schedule Summary as PDF**
-  void _printScheduleSummary() async {
+  /// 📌 **Print Schedule Summary as PDF (Fixed)**
+  Future<void> _printScheduleSummary() async {
+    final scheduledCourses = await _getScheduledCourses();
+    final unscheduledCourses = await _getUnscheduledCourses();
+    final conflicts = await _getConflicts();
+
     final pdf = pw.Document();
     pdf.addPage(
       pw.Page(
         build: (pw.Context context) => pw.Column(
-            children: [
+          children: [
             pw.Text("Schedule Summary Report", style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-        pw.Text("This report shows scheduled vs unscheduled courses."),
-        pw.Bullet(text: "Scheduled Courses: ${ _getScheduledCourses()}"),
-        pw.Bullet(text: "Unscheduled Courses: ${ _getUnscheduledCourses()}"),
-        pw.Bullet(text: "Conflicts Detected: ${ _getConflicts()}"),
-        ],
+            pw.Text("This report shows scheduled vs unscheduled courses."),
+            pw.Bullet(text: "Scheduled Courses: $scheduledCourses"),
+            pw.Bullet(text: "Unscheduled Courses: $unscheduledCourses"),
+            pw.Bullet(text: "Conflicts Detected: $conflicts"),
+          ],
+        ),
       ),
-    ),
     );
+
     await Printing.layoutPdf(onLayout: (PdfPageFormat format) async => pdf.save());
   }
 
-  /// 📌 **Send Email to Each Instructor**
+
   void _sendInstructorEmail(Map<String, dynamic> instructor) async {
     String emailBody = _generateInstructorEmailContent(instructor);
 
@@ -252,7 +265,6 @@ Course Management Team
 ''';
   }
 
-  /// 📌 **Dummy Functions for Summary Count (Replace with Firestore)**
   Future<int> _getScheduledCourses() async => 30;
   Future<int> _getUnscheduledCourses() async => 10;
   Future<int> _getConflicts() async => 5;

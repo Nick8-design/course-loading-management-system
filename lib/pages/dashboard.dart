@@ -7,9 +7,11 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../components/color_button.dart';
 import '../components/nav_drawer.dart';
+import '../components/profile.dart';
 import '../components/theme_button.dart';
 import '../components/wavyappbarclipper.dart';
 import '../constants.dart';
+import '../data/providers.dart';
 
 class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({
@@ -23,8 +25,21 @@ class DashboardScreen extends ConsumerWidget {
   final void Function(bool useLightMode) changeTheme;
   final void Function(int value) changeColor;
 
+  void _showProfileDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return ProfileEditDialog();
+      },
+    );
+  }
+
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final userDao = ref.watch(userDaoProvider);
+    final userrol=ref.watch(userRoleProvider);
+
     return Scaffold(
       drawer: NavDrawer(),
       appBar: PreferredSize(
@@ -40,14 +55,26 @@ class DashboardScreen extends ConsumerWidget {
               ColorButton(changeColor: changeColor, colorSelected: colorSelected),
               IconButton(
                 onPressed: () async {
+                  userDao.logout();
+                  await Future.delayed(Duration(milliseconds: 1));
                   context.go('/login');
                 },
                 icon: Icon(Icons.logout_sharp),
               ),
+
               IconButton(
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text("Logged in as ${userrol.value}"),
+                      duration: const Duration(microseconds: 500),
+                    ),
+                  );
+                  _showProfileDialog(context);
+                },
                 icon: Icon(Icons.account_circle_outlined, size: 50, color: Colors.white),
               ),
+
             ],
           ),
         ),
